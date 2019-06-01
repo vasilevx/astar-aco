@@ -9,6 +9,11 @@
     <script src="cytoscape.min.js"></script>
 </head>
 <body>
+    <input type="text" id="startInput" placeholder="Откуда" maxlength="1">
+    <input type="text" id="finishInput" placeholder="Куда" maxlength="1">
+    <br>
+    <input type="button" onclick="aStar();" value="Алгоритм A*">
+    <input type="button" value="Муравьиный алгоритм">
     <div id="container"></div>
     <script src="main.js"></script>
 </body>

@@ -1,7 +1,12 @@
 #container {
-    height: 100%;
-    width: 100%;
-    position: absolute;
+    height: 900px;
+    width: 70%;
+    float: right;
+    position: relative;
     left: 0;
-    top: 0;
+    bottom: 0;
+    background: #fff;
 }
+
+
+
