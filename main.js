@@ -12,10 +12,20 @@ const data = {
 }
 
 let start, finish;
+(() => {
+  Object.keys(data).forEach(id => {
+    const option = document.createElement('option');
+    option.value = id;
+    option.innerText = id;
 
-document.addEventListener('input', function(e) {
+    startInput.appendChild(option);
+    finishInput.appendChild(option.cloneNode(true));
+  })
+})()
+
+document.addEventListener('change', function(e) {
   const element = e.target;
-  if (element.type != 'text') return;
+  // if (element.type != 'text') return;
   if (element == startInput) {
     cy.$(`#${start}`).removeClass('start');
     start = element.value.toUpperCase();
@@ -123,6 +133,9 @@ let cy = cytoscape({
 function unselect() {
   cy.elements().unselect();
 }
+const fw = cy.elements().floydWarshall({
+  weight: edge => edge.data('weight')
+});
 
 function aStar() {
   if (!(start && finish)) return;
@@ -203,14 +216,129 @@ function aStar() {
 }
 
 function ACO(numberOfAnts) {
-  numberOfAnts = Number(numberOfAnts);
-  if (isNaN(numberOfAnts)) return;
-  console.log(numberOfAnts);
-  
-  // const ants = 
+  const ants = Number(numberOfAnts);
+  const iters = Number(nIters.value)
   const decay = 0.8;
   const alpha = 1;
   const beta = 0;
+  if (isNaN(numberOfAnts) || isNaN(iters)) return;
+  
+  // const ants = 
+
+  // console.log(graph.nodes);
+  const pheromone = graph.nodes.reduce((obj, node) => {
+    const neinhs = cy.nodes(`#${node.data.id}`).neighborhood().nodes().map(node => node.data('id'));
+    obj[node.data.id] = neinhs;
+    return obj;
+  }, {});
+  // console.log(pheromone);
+
+  const optimalPath = [];
+  let i = 0;
+
+  iterations = iters;
+
+  
+
+  while (i < iters) {
+    const allPaths = genAllPaths();
+    console.log(pheromone);
+    // phDecay(); TODO
+    // spreadPh();
+
+    i++;
+
+  }
+
+  function genPath() {
+    const cameFrom = {};
+    cameFrom[start] = null;
+
+    let current = start;
+
+    while (current !== finish) {
+      let next = pickMove(cameFrom, current);
+
+      if (next == -1) return -1;
+
+      cameFrom[next] = current;
+      current = next;
+
+
+    }
+
+    delete cameFrom[start];
+    console.log(`Путь: ${start} -> ${Object.keys(cameFrom).join(' -> ')}`);
+    return cameFrom;
+
+
+  }
+
+  function pickMove(visited, current) {
+    const phRow = pheromone[current].reduce((obj, node) => {
+      obj[node] = cy.nodes(`#${current}`).edgesWith(`#${node}`).data('weight');
+      return obj;
+    }, {});
+
+    for (let node of Object.keys(visited)) {
+      if (phRow[node]) {
+        phRow[node] = 0;
+      }
+    }
+
+    let wayToEsc = phRow.length;
+
+    for (let way of Object.keys(phRow)) {
+      if (phRow[way] == 0) {
+        wayToEsc -= 1;
+        if (wayToEsc == 0) return -1;
+      }
+    }
+
+    const distr = [];
+
+    for (let move of pheromone[current]) {
+      distr.push(phRow[move] ** alpha * (1.0 / cy.nodes(`#${current}`).edgesWith(`#${move}`).data('weight')) ** beta)
+    }
+
+    
+    let sumOfDistr = distr.reduce((sum, d) => {
+      sum += d;
+      return sum;
+    }, 0);
+
+
+    for (let i = 0; i < distr.length; i++) {
+      distr[i] /= sumOfDistr;
+    }
+    const move = (function() {
+      let num = Math.random(), s = 0, lstIndx = distr.length - 1;
+
+      for (let i = 0; i < lstIndx; ++i) {
+        s += distr[i];
+        if (num < s) 
+          return Array.from(Object.keys(phRow))[i];
+      }
+      return Array.from(Object.keys(phRow))[lstIndx];
+    })();
+    return move;
+  }
+
+  function genAllPaths() {
+    const allPaths = [];
+
+    for(let i = 0; i < ants; i++) {
+      const path = genPath();
+      if (path == -1) continue;
+      let totalCost = Object.keys(path).reduce((pathLen, node) => pathLen +  cy.$(`#${node}`).edgesWith(`#${path[node]}`).data('weight'), 0);
+      allPaths.push({path, totalCost});
+      console.log(allPaths);
+    }
+
+    return allPaths;
+  }
+
+
 
 }
 
