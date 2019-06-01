@@ -211,22 +211,7 @@ function ACO(numberOfAnts) {
   const decay = 0.8;
   const alpha = 1;
   const beta = 0;
-  let V=[];			//Vertex Set
-  let algoOn=0;
-  let a=[[0],[0]]//Adjacency Matrix
-  let n=0;			//Nodes
-  let i,j;
-  //let iteration
-  let A=[];			///Ants
-  let destination=3;
-  let p=[[0],[0]];
-  let antNumber=4;
-  let p_max=150;		//Max Pheromone
-  let e_factor;	//Evaporation Factor
-  let iACO=0;			//Counter
-  let best=-1;
-  let alphaC=1,beta=0;
-  let gount=5;
+
 }
 
 
