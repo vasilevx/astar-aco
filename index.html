@@ -11,9 +11,13 @@
 <body>
     <input type="text" id="startInput" placeholder="Откуда" maxlength="1">
     <input type="text" id="finishInput" placeholder="Куда" maxlength="1">
-    <br>
-    <input type="button" onclick="aStar();" value="Алгоритм A*">
-    <input type="button" value="Муравьиный алгоритм">
+    <h2>Алгоритм A*</h2>
+    <p><input type="button" onclick="aStar();" value="Запустить"></p> 
+
+    <h2>Муравьиный алгоритм</h2>
+    <input type="text" id="antsCount" placeholder="Количество муравьев">
+    <p><input type="button" onclick="ACO(antsCount.value);" value="Запустить"></p>
+
     <div id="container"></div>
     <script src="main.js"></script>
 </body>

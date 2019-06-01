@@ -1,11 +1,11 @@
 #container {
-    height: 900px;
+    height: 100%;
     width: 70%;
     float: right;
-    position: relative;
-    left: 0;
+    position: absolute;
+    right: 0;
     bottom: 0;
-    background: #fff;
+    background: rgb(155, 146, 24);
 }
 
 
