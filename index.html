@@ -9,22 +9,33 @@
     <script src="cytoscape.min.js"></script>
 </head>
 <body>
-    <select id="startInput">
-        <option>Стартовая вершина</option>
-    </select>
-    <select id="finishInput">
-        <option>Конечная вершина</option>
-    </select>
-    <!-- <input type="text" id="startInput" placeholder="Откуда" maxlength="1">
-    <input type="text" id="finishInput" placeholder="Куда" maxlength="1"> -->
-    <h2>Алгоритм A*</h2>
-    <p><input type="button" onclick="aStar();" value="Запустить"></p> 
+    <div class="controls">   
+        <div>
+            <div>        
+                    <select id="startInput">
+                        <option>Стартовая вершина</option>
+                    </select>
+                    <select id="finishInput">
+                        <option>Конечная вершина</option>
+                    </select>
+                </div>
+        
+                <p>
+                    <input type="text" id="nAnts" placeholder="Количество муравьев">
+                    <input type="text" id="nIters" placeholder="Количество итераций"> 
+                </p>
+        
+                <div>
+                    <input type="button" onclick="aStar();" value="Запустить A*">
+                    <input type="button" onclick="ACO(nAnts.value);" value="Запустить ACO">
+                </div>
+        </div>
+        
+        <textarea name="" id="output"></textarea>
+        
 
-    <h2>Муравьиный алгоритм</h2>
-    <input type="text" id="nAnts" placeholder="Количество муравьев">
-    <input type="text" id="nIters" placeholder="Количество итераций">
-    <p><input type="button" onclick="ACO(nAnts.value);" value="Запустить"></p>
 
+    </div>
     <div id="container"></div>
     <script src="main.js"></script>
 </body>

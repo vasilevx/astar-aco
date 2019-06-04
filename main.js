@@ -150,10 +150,11 @@ function aStar() {
     nodeIDs.push(node.data.id);
   });
   if(!nodeIDs.includes(finish) || !nodeIDs.includes(start)) return false;
+
   
   
   
-  
+  output.value = '';
   cy.elements('node').addClass('aStar');
   const startNode = cy.elements(`#${start}`);
   const finishNode = cy.elements(`#${finish}`);
@@ -175,12 +176,15 @@ function aStar() {
   queue.push(startNode);
   
   while (queue.length > 0) {
+    output.value += `Очередь: ${queue.map(el => el.data('id')).join(', ')}\n`;
     console.log('Очередь: ', queue.map(el => el.data('id')).join(', '));
+    output.value += `Вершины не в очереди: ${nodeIDs.filter(id => !queue.map(el => el.data('id')).includes(id)).join(', ')}\n`;
     console.log('Вершины не в очереди: ', nodeIDs.filter(id => !queue.map(el => el.data('id')).includes(id)).join(', '));
     currNode = queue.pop();
     currNode.edgesWith(`#${prevID}`).select();
     visited.add(currNode);
     currNode.select();
+    output.value += `Посещенные вершины: ${Array.from(visited).map(el => el.data('id')).join(', ')}\n`;
     console.log('Посещенные вершины: ', Array.from(visited).map(el => el.data('id')).join(', '));
     
     
@@ -209,8 +213,9 @@ function aStar() {
       
     } 
     prevID = currNode.data('id');
-    
-    console.log('-----');
+
+    output.value += `--------------\n`;
+    console.log('--------------');
   }
   return false;   
 }
@@ -222,13 +227,13 @@ function ACO(numberOfAnts) {
   const alpha = 1;
   const beta = 0;
   if (isNaN(numberOfAnts) || isNaN(iters)) return;
-  
+  output.value = '';
   // const ants = 
 
   // console.log(graph.nodes);
   const pheromone = graph.nodes.reduce((obj, node) => {
     const neinhs = cy.nodes(`#${node.data.id}`).neighborhood().nodes().map(node => node.data('id'));
-    obj[node.data.id] = neinhs;
+    obj[node.data.id] = neinhs.map(node => ({node: node, ph: 0}));
     return obj;
   }, {});
   // console.log(pheromone);
@@ -242,8 +247,8 @@ function ACO(numberOfAnts) {
 
   while (i < iters) {
     const allPaths = genAllPaths();
-    console.log(pheromone);
-    // phDecay(); TODO
+    console.log('Феромоны: ', pheromone);
+    phDecay(); 
     // spreadPh();
 
     i++;
@@ -275,7 +280,7 @@ function ACO(numberOfAnts) {
   }
 
   function pickMove(visited, current) {
-    const phRow = pheromone[current].reduce((obj, node) => {
+    const phRow = pheromone[current].map(n => n.node).reduce((obj, node) => {
       obj[node] = cy.nodes(`#${current}`).edgesWith(`#${node}`).data('weight');
       return obj;
     }, {});
@@ -297,7 +302,7 @@ function ACO(numberOfAnts) {
 
     const distr = [];
 
-    for (let move of pheromone[current]) {
+    for (let move of pheromone[current].map(n => n.node)) {
       distr.push(phRow[move] ** alpha * (1.0 / cy.nodes(`#${current}`).edgesWith(`#${move}`).data('weight')) ** beta)
     }
 
@@ -324,6 +329,19 @@ function ACO(numberOfAnts) {
     return move;
   }
 
+  function phDecay() {
+    for (let i of Object.keys(pheromone)) {
+      for (let j of pheromone[i]) {
+        // console.log(i, j);
+       j.ph *= 1 - decay;
+      }
+    }
+  }
+
+  function spreadPh() {
+    
+  }
+
   function genAllPaths() {
     const allPaths = [];
 
@@ -332,7 +350,7 @@ function ACO(numberOfAnts) {
       if (path == -1) continue;
       let totalCost = Object.keys(path).reduce((pathLen, node) => pathLen +  cy.$(`#${node}`).edgesWith(`#${path[node]}`).data('weight'), 0);
       allPaths.push({path, totalCost});
-      console.log(allPaths);
+      console.log('Пути: ', allPaths);
     }
 
     return allPaths;
