@@ -68,7 +68,8 @@ let a = cytoscape({
 });
 
 let cy = cytoscape({
-  container: document.getElementById('container'),   
+  container: document.getElementById('container'),
+  userZoomingEnabled: false,   
   style: cytoscape.stylesheet()
   .selector('node')
   .style({
@@ -90,6 +91,17 @@ let cy = cytoscape({
     'width': 6,
     'content': 'data(weight)',
     'color': '#000',
+    'font-size': 18,
+    'line-color': '#ccc',
+  })
+  .selector('.edge-ph')
+  .style({
+    'opacity': 'data(opacity)',
+    'curve-style': 'bezier',
+    // 'target-arrow-shape': 'triangle-backcurve',
+    'width': 6,
+    'content': `data(phero)`,
+    'color': '#f00',
     'font-size': 18,
     'line-color': '#ccc',
   })
@@ -132,6 +144,7 @@ let cy = cytoscape({
 
 function unselect() {
   cy.elements().unselect();
+  cy.edges().removeClass('edge-ph');
 }
 const fw = cy.elements().floydWarshall({
   weight: edge => edge.data('weight')
@@ -222,6 +235,7 @@ function aStar() {
 
 function ACO(numberOfAnts) {
   unselect();
+  cy.edges().removeClass('edge-ph');
   const ants = Number(numberOfAnts);
   const iters = Number(nIters.value)
   const decay = 0.8;
@@ -235,7 +249,7 @@ function ACO(numberOfAnts) {
   const pheromone = graph.nodes.reduce((obj, node) => {
     const neighbors = cy.nodes(`#${node.data.id}`).neighborhood().nodes().map(node => node.data('id'));
     obj[node.data.id] = neighbors.map(neighbor => {
-        return {node: neighbor, ph: 0}
+        return {node: neighbor, ph: 1}
     }
     );
     return obj;
@@ -250,15 +264,23 @@ function ACO(numberOfAnts) {
 
   while (i < iters) {
     allPaths = genAllPaths();
+    
     phDecay(); 
     spreadPh();
-    console.log('Феромоны (изм.): ', pheromone);
+    // console.log('Феромоны (изм.): ', pheromone);
 
     optimalPath = getOptimalPath();
-    console.log('Optimal ',optimalPath);
+    if (Array.isArray(optimalPath))
+    output.value += `Текущий оптимальный путь: ${optimalPath.join('->')}\n`
+    // console.log('Optimal ',optimalPath);
     i++;
 
   }
+  // cy.$(`#${optimalPath[0]}`).edgesWith(`#${1}`).select();
+  optimalPath.forEach((node, i) => {
+    cy.nodes(`#${node}`).select();
+    cy.nodes(`#${node}`).edgesWith(`#${optimalPath[i+1]}`).select();
+  });
 
   function genPath() {
     const cameFrom = {};
@@ -270,7 +292,7 @@ function ACO(numberOfAnts) {
     while (current !== finish) {
       let next = pickMove(cameFrom, current);
 
-      console.log(next);
+      // console.log(next);
       if (next == -1) return -1;
 
       cameFrom[next] = current;
@@ -278,8 +300,10 @@ function ACO(numberOfAnts) {
 
 
     }
-
     delete cameFrom[start];
+    // console.log(cameFrom);
+    // console.log('Получили путь ')
+    // console.log(cameFrom);
     return cameFrom;
 
 
@@ -291,28 +315,33 @@ function ACO(numberOfAnts) {
 
     //   return obj;
     // }, {});
-
+    // console.log(`Находимся в ${current}`);
     const phRow = pheromone[current].map(n => n).reduce((obj, node) => {
       // obj[node.node] = 50 - cy.nodes(`#${current}`).edgesWith(`#${node.node}`).data('weight');
-      obj[node.node] = 1;
+      obj[node.node] = node.ph;
 
       return obj;
     }, {});
 
+    const vstd = new Set();
     for (let node of Object.keys(visited)) {
       if (Object.keys(phRow).includes(node)) {
-        phRow[node] = 0;
+        // phRow[node] = 0;
+        vstd.add(node);
       }
     }
-
-    console.log(phRow);
-    console.log(pheromone);
+    // console.log('Посетили уже ')
+    // console.log(vstd);
+    // console.log(`Ее соседи и их феромоны: `);
+    // console.log(phRow);
+    // console.log(pheromone);
 
 
     let wayToEsc = Object.keys(phRow).length;
 
     for (let way of Object.keys(phRow)) {
-      if (phRow[way] == 0) {
+      // if (phRow[way] == 0) {
+        if(vstd.has(way)) {
         wayToEsc -= 1;
         if (wayToEsc == 0) return -1;
       }
@@ -325,6 +354,11 @@ function ACO(numberOfAnts) {
     }
 
     
+    distr.forEach((n, i) => {
+      if (isNaN(n))
+        distr[i] = 0; 
+    })
+    // console.log(`Еще раз феромоны: ${distr}`);
     let sumOfDistr = distr.reduce((sum, d) => {
       sum += d;
       return sum;
@@ -333,17 +367,37 @@ function ACO(numberOfAnts) {
     
     for (let i = 0; i < distr.length; i++) {
       distr[i] /= sumOfDistr;
-    }
-    const move = (function() {
-      let num = Math.random(), s = 0, lstIndx = distr.length - 1;
 
+    }
+    // console.log(`Вероятности перехода:`);
+    // console.log(distr);
+    // console.log('distr ',distr);
+
+    let move = (function() {
+      let num = Math.random(), s = 0, lstIndx = distr.length - 1;
+      // console.log('num ',num)
       for (let i = 0; i < lstIndx; ++i) {
         s += distr[i];
+        // console.log('s', s)
         if (num < s) 
           return Array.from(Object.keys(phRow))[i];
       }
       return Array.from(Object.keys(phRow))[lstIndx];
     })();
+    // console.log(`Переходим в ${move}`);
+    while(vstd.has(move)) {
+      move = (function() {
+        let num = Math.random(), s = 0, lstIndx = distr.length - 1;
+        // console.log('num ',num)
+        for (let i = 0; i < lstIndx; ++i) {
+          s += distr[i];
+          // console.log('s', s)
+          if (num < s) 
+            return Array.from(Object.keys(phRow))[i];
+        }
+        return Array.from(Object.keys(phRow))[lstIndx];
+      })();
+    }
     return move;
   }
 
@@ -382,21 +436,24 @@ function ACO(numberOfAnts) {
   }
 
   function spreadPh() {
-    console.log('Пути: ', allPaths);
     allPaths.forEach(way => {
       Object.keys(way.path).forEach(to => {
           for(let direction of pheromone[to]) {
             if (direction.node == way.path[to]) {
-                let dist = cy.nodes(`#${to}`).edgesWith(`#${direction.node}`).data('weight');
+
+                let dist = way.totalCost;
                 direction.ph += Q / dist;
                 pheromone[way.path[to]].forEach(n => {
                   if (n.node == to) {
                     n.ph += Q / dist;
+                    cy.$(`#${to}`).edgesWith(`#${direction.node}`).data('phero', n.ph.toFixed(2))
+                    .data('opacity', +n.ph.toFixed(2) + 0.3)
+                    .addClass('edge-ph');
+
                   }
                 });
               }
-          }
-        
+          }        
       });
     })
   }
