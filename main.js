@@ -221,24 +221,27 @@ function aStar() {
 }
 
 function ACO(numberOfAnts) {
+  unselect();
   const ants = Number(numberOfAnts);
   const iters = Number(nIters.value)
   const decay = 0.8;
   const alpha = 1;
   const beta = 0;
+  const Q = 1;
+  let allPaths;
   if (isNaN(numberOfAnts) || isNaN(iters)) return;
   output.value = '';
-  // const ants = 
 
-  // console.log(graph.nodes);
   const pheromone = graph.nodes.reduce((obj, node) => {
-    const neinhs = cy.nodes(`#${node.data.id}`).neighborhood().nodes().map(node => node.data('id'));
-    obj[node.data.id] = neinhs.map(node => ({node: node, ph: 0}));
+    const neighbors = cy.nodes(`#${node.data.id}`).neighborhood().nodes().map(node => node.data('id'));
+    obj[node.data.id] = neighbors.map(neighbor => {
+        return {node: neighbor, ph: 0}
+    }
+    );
     return obj;
   }, {});
-  // console.log(pheromone);
 
-  const optimalPath = [];
+  let optimalPath;
   let i = 0;
 
   iterations = iters;
@@ -246,11 +249,13 @@ function ACO(numberOfAnts) {
   
 
   while (i < iters) {
-    const allPaths = genAllPaths();
-    console.log('Феромоны: ', pheromone);
+    allPaths = genAllPaths();
     phDecay(); 
-    // spreadPh();
+    spreadPh();
+    console.log('Феромоны (изм.): ', pheromone);
 
+    optimalPath = getOptimalPath();
+    console.log('Optimal ',optimalPath);
     i++;
 
   }
@@ -261,9 +266,11 @@ function ACO(numberOfAnts) {
 
     let current = start;
 
+
     while (current !== finish) {
       let next = pickMove(cameFrom, current);
 
+      console.log(next);
       if (next == -1) return -1;
 
       cameFrom[next] = current;
@@ -273,25 +280,36 @@ function ACO(numberOfAnts) {
     }
 
     delete cameFrom[start];
-    console.log(`Путь: ${start} -> ${Object.keys(cameFrom).join(' -> ')}`);
     return cameFrom;
 
 
   }
 
   function pickMove(visited, current) {
-    const phRow = pheromone[current].map(n => n.node).reduce((obj, node) => {
-      obj[node] = cy.nodes(`#${current}`).edgesWith(`#${node}`).data('weight');
+    // const phRow = pheromone[current].map(n => n.node).reduce((obj, node) => {
+    //   obj[node] = cy.nodes(`#${current}`).edgesWith(`#${node}`).data('weight');
+
+    //   return obj;
+    // }, {});
+
+    const phRow = pheromone[current].map(n => n).reduce((obj, node) => {
+      // obj[node.node] = 50 - cy.nodes(`#${current}`).edgesWith(`#${node.node}`).data('weight');
+      obj[node.node] = 1;
+
       return obj;
     }, {});
 
     for (let node of Object.keys(visited)) {
-      if (phRow[node]) {
+      if (Object.keys(phRow).includes(node)) {
         phRow[node] = 0;
       }
     }
 
-    let wayToEsc = phRow.length;
+    console.log(phRow);
+    console.log(pheromone);
+
+
+    let wayToEsc = Object.keys(phRow).length;
 
     for (let way of Object.keys(phRow)) {
       if (phRow[way] == 0) {
@@ -299,7 +317,7 @@ function ACO(numberOfAnts) {
         if (wayToEsc == 0) return -1;
       }
     }
-
+    
     const distr = [];
 
     for (let move of pheromone[current].map(n => n.node)) {
@@ -312,7 +330,7 @@ function ACO(numberOfAnts) {
       return sum;
     }, 0);
 
-
+    
     for (let i = 0; i < distr.length; i++) {
       distr[i] /= sumOfDistr;
     }
@@ -332,14 +350,55 @@ function ACO(numberOfAnts) {
   function phDecay() {
     for (let i of Object.keys(pheromone)) {
       for (let j of pheromone[i]) {
-        // console.log(i, j);
-       j.ph *= 1 - decay;
+       j.ph *= (1 - decay);
       }
     }
   }
 
+  function getOptimalPath() {
+    const visited = [];
+
+    let current = start;
+
+    visited.push(start);
+
+    while (current != finish) {
+      let nextMove = -1;
+
+      const currentNeighbors = pheromone[current].sort((a, b) => b.ph - a.ph);
+      for (let neighbor of currentNeighbors) {
+        if (!visited.includes(neighbor.node)) {
+          nextMove = neighbor.node;
+          current = nextMove;
+
+          visited.push(current);
+          break;
+        }
+      }
+
+      if (nextMove == -1) return -1;
+    }
+    return visited;
+  }
+
   function spreadPh() {
-    
+    console.log('Пути: ', allPaths);
+    allPaths.forEach(way => {
+      Object.keys(way.path).forEach(to => {
+          for(let direction of pheromone[to]) {
+            if (direction.node == way.path[to]) {
+                let dist = cy.nodes(`#${to}`).edgesWith(`#${direction.node}`).data('weight');
+                direction.ph += Q / dist;
+                pheromone[way.path[to]].forEach(n => {
+                  if (n.node == to) {
+                    n.ph += Q / dist;
+                  }
+                });
+              }
+          }
+        
+      });
+    })
   }
 
   function genAllPaths() {
@@ -348,11 +407,13 @@ function ACO(numberOfAnts) {
     for(let i = 0; i < ants; i++) {
       const path = genPath();
       if (path == -1) continue;
-      let totalCost = Object.keys(path).reduce((pathLen, node) => pathLen +  cy.$(`#${node}`).edgesWith(`#${path[node]}`).data('weight'), 0);
+      let totalCost = Object.keys(path).reduce((pathLen, node) => {
+        return pathLen +  cy.$(`#${node}`).edgesWith(`#${path[node]}`).data('weight');
+      }, 0);
       allPaths.push({path, totalCost});
-      console.log('Пути: ', allPaths);
-    }
 
+    }
+    
     return allPaths;
   }
 
