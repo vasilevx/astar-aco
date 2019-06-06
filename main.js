@@ -1,15 +1,15 @@
 const data = {
-  "A": ["B", "C"],
-  "B": ["A", "C", "D", "E"] ,
-  "C": ["A", "B", "D", "G", "H"],
-  "D": ["B", "C", "F", "G"],
-  "E": ["B", "F"],
-  "F": ["D", "E", "I"],
-  "G": ["C", "D", "I", "J"],
-  "H": ["C"],
-  "I": ["E", "F", "G", "J"],
-  "J": ["G", "H", "I"]
-}
+  "A": [["B", 3], ["C", 20]],
+  "B": [["A", 3], ["C", 10], ["D", 3], ["E", 33]] ,
+  "C": [["A", 20], ["B", 10], ["D", 3], ["G", 1], ["H", 2]],
+  "D": [["B", 3], ["C", 3], ["F", 5], ["G", 6]],
+  "E": [["B", 33], ["F", 15]],
+  "F": [["D", 5], ["E", 15], ["I", 4]],
+  "G": [["C", 1], ["D", 6], ["I", 13], ["J", 1]],
+  "H": [["C", 2]],
+  "I": [["F", 4], ["G", 13], ["J", 8]],
+  "J": [["G", 1], ["I", 8]]
+}// TODO :: Задание весов, добавление ребер (и вершин) вывод феромонов и весов
 
 let start, finish;
 (() => {
@@ -42,18 +42,20 @@ document.addEventListener('change', function(e) {
 
 function graphFromData(data) {
   const nodes = [], edges = [];
-  Object.keys(data).map((key) => {
+  Object.keys(data).forEach((key) => {
     nodes.push({
       data: {
         id: String(key)
       }
     });
-    data[key].forEach((v) => {
+    data[key].forEach((pair) => {
       if (!edges.find(edge => {
-        return (edge.data.source == v && edge.data.target == key) || (edge.data.source == key && edge.data.target == v)
+        return (edge.data.source == pair[0] && edge.data.target == key) || (edge.data.source == key && edge.data.target == pair[0])
+
+        // return (edge.data.source == v && edge.data.target == key) || (edge.data.source == key && edge.data.target == v)
         
       })) {
-        edges.push({data: {id: `${key}${v}`, weight: Math.floor(Math.random() * (20 - 1)) + 1, source: String(key), target: String(v)}})
+        edges.push({data: {id: `${key}${pair[0]}`, weight: pair[1], source: String(key), target: String(pair[0])}})
       }
     });
   });  
@@ -187,7 +189,7 @@ function aStar() {
   const queue = [];
   const visited = new Set();
   queue.push(startNode);
-  
+  let pathLength = 0;
   while (queue.length > 0) {
     output.value += `Очередь: ${queue.map(el => el.data('id')).join(', ')}\n`;
     console.log('Очередь: ', queue.map(el => el.data('id')).join(', '));
@@ -197,9 +199,11 @@ function aStar() {
     currNode.edgesWith(`#${prevID}`).select();
     visited.add(currNode);
     currNode.select();
-    output.value += `Посещенные вершины: ${Array.from(visited).map(el => el.data('id')).join(', ')}\n`;
+    pathLength += +currNode.edgesWith(`#${prevID}`).data('weight');
+    if (isNaN(pathLength)) pathLength = 0;
+    console.log(pathLength);
+    output.value += `Посещенные вершины: ${Array.from(visited).map(el => el.data('id')).join(', ')}, прошли расстояние ${pathLength} \n`;
     console.log('Посещенные вершины: ', Array.from(visited).map(el => el.data('id')).join(', '));
-    
     
     
     if (currNode.data('id') == finishNode.data('id')) {
@@ -277,10 +281,18 @@ function ACO(numberOfAnts) {
 
   }
   // cy.$(`#${optimalPath[0]}`).edgesWith(`#${1}`).select();
+  let pathLength = 0;
   optimalPath.forEach((node, i) => {
     cy.nodes(`#${node}`).select();
+    if (cy.nodes(`#${node}`).edgesWith(`#${optimalPath[i+1]}`).data('weight') == undefined) {
+      pathLength += 0;
+    }  else {
+      pathLength +=  +cy.nodes(`#${node}`).edgesWith(`#${optimalPath[i+1]}`).data('weight');
+    }
     cy.nodes(`#${node}`).edgesWith(`#${optimalPath[i+1]}`).select();
   });
+
+  output.value += `прошли путь ${pathLength} \n`;
 
   function genPath() {
     const cameFrom = {};
